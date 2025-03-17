@@ -1,18 +1,17 @@
-const mysql = require('mysql2');
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'root',  
-    database: 'mynuvemlens'
-});
+const app = express();
 
-connection.connect((err) => {
-    if (err) {
-        console.error('Erro ao conectar ao banco de dados:', err);
-        return;
-    }
-    console.log('Conectado ao banco de dados!');
-});
+// Configurações básicas
+app.use(express.json());
+app.use(cors());
 
-module.exports = connection;
+// Importação das rotas
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
+// Iniciando o servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
