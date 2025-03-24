@@ -34,7 +34,7 @@ exports.register = async (req, res) => {
     const { nome, email, senha } = req.body;
     const senhaCriptografada = await bcrypt.hash(senha, 10);
 
-    const sql = "INSERT INTO usuarios (nome, email, senha, perfil_id) VALUES (?, ?, ?, 2)";
+    const sql = "INSERT INTO usuarios (nome, email, senha, perfil_id) VALUES (?, ?, ?, 3)";
     db.query(sql, [nome, email, senhaCriptografada], (err, result) => {
         if (err) return res.status(500).json({ error: "Erro ao criar usuário" });
         res.json({ message: "Usuário registrado com sucesso!" });
