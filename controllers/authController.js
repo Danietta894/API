@@ -1,49 +1,73 @@
-const db = require('../config/db');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+const db = require("../config/db");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+require("dotenv").config();
 
 // Login de Usuário
 exports.login = (req, res) => {
-    const { email, senha } = req.body;
-    const sql = "SELECT * FROM usuarios WHERE email = ?";
-    
-    db.query(sql, [email], async (err, result) => {
-        if (err) return res.status(500).json({ error: "Erro no servidor" });
-        if (result.length === 0) return res.status(401).json({ error: "Usuário não encontrado" });
+  const { email, senha } = req.body;
+  const sql = "SELECT * FROM usuarios WHERE email = ?";
 
-        const usuario = result[0];
-        
-        // Comparar senha com hash armazenado
-        const senhaValida = await bcrypt.compare(senha, usuario.senha);
-        if (!senhaValida) return res.status(401).json({ error: "Senha incorreta" });
+  db.query(sql, [email], async (err, result) => {
+    if (err) return res.status(500).json({ error: "Erro no servidor" });
+    if (result.length === 0)
+      return res.status(401).json({ error: "Usuário não encontrado" });
 
-        // Criar token JWT
-        const token = jwt.sign(
-            { id: usuario.id, perfil_id: usuario.perfil_id }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1h' }
-        );
+    const usuario = result[0];
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaValida) return res.status(401).json({ error: "Senha incorreta" });
 
-        res.json({ token, perfil_id: usuario.perfil_id, nome: usuario.nome });
-    });
+    const token = jwt.sign(
+      { id: usuario.id, perfil_id: usuario.perfil_id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({ token, perfil_id: usuario.perfil_id, nome: usuario.nome });
+  });
 };
 
 // Registro de Novo Usuário
 exports.register = async (req, res) => {
-    const { nome, email, senha } = req.body;
-    const senhaCriptografada = await bcrypt.hash(senha, 10);
+  const { nome, email, senha } = req.body;
+  const senhaCriptografada = await bcrypt.hash(senha, 10);
+  const sqlVerificaEmail = "SELECT * FROM usuarios WHERE email = ?";
 
-    const sql = "INSERT INTO usuarios (nome, email, senha, perfil_id) VALUES (?, ?, ?, 3)";
+  db.query(sqlVerificaEmail, [email], (err, result) => {
+    if (err) return res.status(500).json({ error: "Erro ao verificar email" });
+    if (result.length > 0)
+      return res.status(400).json({ error: "E-mail já cadastrado" });
+
+    const sql =
+      "INSERT INTO usuarios (nome, email, senha, perfil_id) VALUES (?, ?, ?, 3)";
     db.query(sql, [nome, email, senhaCriptografada], (err, result) => {
-        if (err) return res.status(500).json({ error: "Erro ao criar usuário" });
-        res.json({ message: "Usuário registrado com sucesso!" });
+      if (err) return res.status(500).json({ error: "Erro ao criar usuário" });
+      res.json({ message: "Usuário registrado com sucesso!" });
     });
+  });
 };
 
-// Logout (Simplesmente remove o token no front-end)
+// Logout (Simples)
 exports.logout = (req, res) => {
-    res.json({ message: "Logout realizado com sucesso!" });
+  res.json({ message: "Logout realizado com sucesso!" });
 };
 
+// Esqueci Minha Senha
+exports.esqueciSenha = (req, res) => {
+  const { email } = req.body;
 
+  if (!email) {
+    return res.status(400).json({ error: "Email é obrigatório." });
+  }
+
+  const sql = "SELECT * FROM usuarios WHERE email = ?";
+  db.query(sql, [email], (err, result) => {
+    if (err) return res.status(500).json({ error: "Erro no servidor" });
+
+    // Mesmo que o e-mail não exista, não informamos por segurança
+    return res.json({
+      message:
+        "Se este e-mail estiver cadastrado, enviaremos um link de recuperação.",
+    });
+  });
+};

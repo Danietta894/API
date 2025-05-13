@@ -7,7 +7,7 @@ const { verificarToken, verificarPermissao } = require('../middleware/authMiddle
 router.post('/login', authController.login);
 router.post('/register', authController.register);
 router.post('/logout', authController.logout);
-
+router.post('/esquecisenha', authController.esqueciSenha);
 // Rota protegida (somente usuários autenticados podem acessar)
 router.get('/perfil', verificarToken, (req, res) => {
     res.json({ message: "Bem-vindo ao seu perfil!", usuario: req.user });
