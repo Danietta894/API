@@ -1,10 +1,12 @@
 // routes/moderadorRoutes.js
 const express = require("express");
+
 const router = express.Router();
 const {
   verificarToken,
   verificarPermissao,
 } = require("../middleware/authMiddleware");
+const { listarAtividades } = require("../controllers/moderadorController");
 
 router.get("/moderador/perfil", verificarToken, verificarPermissao([1,4]), (req, res) => {
   res.json({
@@ -24,5 +26,7 @@ router.get("/moderador/perfil", verificarToken, verificarPermissao([1,4]), (req,
     ],
   });
 });
+
+router.get("/moderador/atividades", verificarToken, listarAtividades);
 
 module.exports = router;

@@ -5,21 +5,33 @@ exports.criarFoto = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ erro: "Nenhuma imagem enviada." });
   }
-  const { descricao, tipo } = req.body;
 
-  if (!descricao || !tipo) {
+  const { descricao, localizacao, longitude, latitude, fotografado_em } =
+    req.body;
+
+  if (
+    !descricao ||
+    !localizacao ||
+    !longitude ||
+    !latitude ||
+    !fotografado_em
+  ) {
     return res.status(400).json({ erro: "Preencha todos os campos" });
   }
 
   try {
-    const query =
-      "INSERT INTO fotos (url, descricao, tipo, usuario_id, localizacao) VALUES (?, ?, ?, ?, ?)";
+    const query = `
+      INSERT INTO fotos (url, descricao, tipo, usuario_id, localizacao, longitude, latitude, fotografado_em)
+      VALUES (?, ?, '', ?, ?, ?, ?, ?)
+    `;
     const valores = [
       `/uploads/${req.file.filename}`,
       descricao,
-      tipo,
       req.user.id,
-        req.body.localizacao,
+      localizacao,
+      longitude,
+      latitude,
+      fotografado_em,
     ];
 
     db.query(query, valores, (erro, resultado) => {
@@ -27,35 +39,73 @@ exports.criarFoto = async (req, res) => {
         console.error(erro);
         return res.status(500).json({ erro: "Erro ao salvar a foto" });
       }
-      res.status(201).json({ id: resultado.insertId, ...req.body });
+
+      const fotoId = resultado.insertId;
+
+      const insertValidacao = `
+        INSERT INTO validacao (foto_id, moderador_id, status)
+        VALUES (?, NULL, 'pendente')
+      `;
+
+      db.query(insertValidacao, [fotoId], (errValidacao) => {
+        if (errValidacao) {
+          console.error("Erro ao criar validação:", errValidacao);
+          return res
+            .status(500)
+            .json({ erro: "Erro ao criar validação da imagem" });
+        }
+
+        res.status(201).json({ id: fotoId, ...req.body });
+      });
     });
   } catch (erro) {
-    res.status(500).json({ erro: "Erro ao salvar a foto" });
+    console.error("Erro no servidor:", erro);
+    return res.status(500).json({ erro: "Erro no servidor" });
   }
 };
 
-// Listar todas as fotos
-exports.listarFotos = (req, res) => {
-  const query = "SELECT * FROM fotos";
+// Listar fotos aprovadas (para galeria pública)
+exports.listarFotosAprovadas = (req, res) => {
+  const query = `
+    SELECT f.*
+    FROM fotos f
+    JOIN validacao v ON f.id = v.foto_id
+    WHERE v.status = 'aprovada'
+  `;
 
   db.query(query, (erro, resultados) => {
     if (erro) {
-      console.error("Erro ao buscar fotos:", erro); // LOG DO ERRO NO SERVIDOR
+      console.error("Erro ao buscar fotos aprovadas:", erro);
       return res.status(500).json({ erro: "Erro ao buscar as fotos" });
     }
     res.json(resultados);
   });
 };
-// Listar todas as fotos
-exports.listarFotosporid = (req, res) => {
-  const query = "SELECT * FROM fotos WHERE id = ?";
-  const { id } = req.params;
-  db.query(query, [id], (erro, resultados) => {
+
+// Listar fotos do usuário logado
+exports.listarFotosDoUsuario = (req, res) => {
+  const query = "SELECT * FROM fotos WHERE usuario_id = ?";
+
+  db.query(query, [req.user.id], (erro, resultados) => {
     if (erro) {
-      console.error("Erro ao buscar fotos:", erro); // LOG DO ERRO NO SERVIDOR
+      console.error("Erro ao buscar fotos do usuário:", erro);
       return res.status(500).json({ erro: "Erro ao buscar as fotos" });
     }
     res.json(resultados);
+  });
+};
+
+// Buscar uma foto por ID
+exports.listarFotosporid = (req, res) => {
+  const { id } = req.params;
+  const query = "SELECT * FROM fotos WHERE id = ?";
+
+  db.query(query, [id], (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar foto por ID:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar a foto" });
+    }
+    res.json(resultados[0] || {});
   });
 };
 
@@ -64,8 +114,9 @@ exports.atualizarFoto = (req, res) => {
   const { id } = req.params;
   const { url, descricao, tipo } = req.body;
 
-  const query =
-    "UPDATE fotos SET url = ?, descricao = ?, tipo = ? WHERE id = ?";
+  const query = `
+    UPDATE fotos SET url = ?, descricao = ?, tipo = ? WHERE id = ?
+  `;
   const valores = [url, descricao, tipo, id];
 
   db.query(query, valores, (erro) => {
@@ -80,7 +131,6 @@ exports.atualizarFoto = (req, res) => {
 // Excluir uma foto
 exports.deletarFoto = (req, res) => {
   const { id } = req.params;
-
   const query = "DELETE FROM fotos WHERE id = ?";
 
   db.query(query, [id], (erro) => {

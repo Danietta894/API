@@ -38,6 +38,9 @@ app.use("/api", moderadorRoutes);
 const uploadRoutes = require("./routes/uploadRoutes");
 app.use("/uploads", express.static("uploads"));
 app.use("/api/upload", uploadRoutes);
+const validacaoRoutes = require("./routes/validacaoRoutes");
+app.use("/api", validacaoRoutes);
+
 
 
 // Iniciando o servidor
