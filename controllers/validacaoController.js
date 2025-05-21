@@ -26,13 +26,25 @@ exports.aprovarImagem = (req, res) => {
   const imagemId = req.params.id;
 
   const sql = "UPDATE validacao SET status = 'aprovada' WHERE foto_id = ?";
+
   db.query(sql, [imagemId], (err) => {
     if (err) {
       console.error("Erro ao aprovar imagem:", err);
       return res.status(500).json({ erro: "Erro ao aprovar imagem" });
     }
-    res.sendStatus(200);
+    // Atualiza o tipo da imagem na tabela fotos
+     // Aqui você pode definir o tipo como 'aprovada' ou outro valor que faça sentido
+     console.log("req.body.tipo", req.body);
+     const sqlfoto = "UPDATE fotos SET tipo = ? WHERE id = ?";
+     db.query(sqlfoto, [req.body.tipo, imagemId], (err) => {
+       if (err) {
+         console.error("Erro ao aprovar imagem:", err);
+         return res.status(500).json({ erro: "Erro ao aprovar imagem" });
+       }
+       res.sendStatus(200);
+     });
   });
+ 
 };
 
 // Recusar imagem
