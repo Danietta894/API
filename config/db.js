@@ -1,9 +1,10 @@
 const mysql = require('mysql2');
 const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'root',  
-    database: 'mynuvemlens'
+  host: "localhost",
+  user: "root",
+  password: "root",
+  database: "mynuvemlens",
+  charset: "utf8",
 });
 
 connection.connect((err) => {

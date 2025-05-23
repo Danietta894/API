@@ -67,9 +67,10 @@ exports.criarFoto = async (req, res) => {
 // Listar fotos aprovadas (para galeria pública)
 exports.listarFotosAprovadas = (req, res) => {
   const query = `
-    SELECT f.*
+    SELECT f.*, u.nome AS nome_usuario
     FROM fotos f
     JOIN validacao v ON f.id = v.foto_id
+    JOIN usuarios u ON f.usuario_id = u.id
     WHERE v.status = 'aprovada'
   `;
 
