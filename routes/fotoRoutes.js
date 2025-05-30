@@ -15,5 +15,10 @@ router.get("/fotos/eu", verificarToken, fotoController.listarFotosDoUsuario); //
 router.put("/fotos/:id", fotoController.atualizarFoto);
 router.delete("/fotos/:id", fotoController.deletarFoto);
 router.get("/fotos/:id", fotoController.listarFotosporid);
+router.get(
+  "/fotos/pendentes/eu",
+  verificarToken,
+  fotoController.listarFotosPendentesDoUsuario
+);
 
 module.exports = router;

@@ -96,6 +96,21 @@ exports.listarFotosDoUsuario = (req, res) => {
   });
 };
 
+exports.listarFotosPendentesDoUsuario = (req, res) => {
+  const query = `SELECT f.* 
+  FROM fotos f
+  JOIN validacao v ON f.id = v.foto_id
+    WHERE v.status = 'pendente'
+   and f.usuario_id = ?`;
+
+  db.query(query, [req.user.id], (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar fotos do usuário:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar as fotos" });
+    }
+    res.json(resultados);
+  });
+};
 // Buscar uma foto por ID
 exports.listarFotosporid = (req, res) => {
   const { id } = req.params;
