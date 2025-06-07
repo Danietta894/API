@@ -38,8 +38,8 @@ API desenvolvida para gerenciamento de fotos, usuários, comentários e pedidos 
 1. Clone os repositórios:
 
 ```bash
-git clone https://github.com/Danietta894/API.git
-git clone https://github.com/Danietta894/mynuvemlens.git
+git clone https://github.com/Danietta894/BackEndMyNuvemLens.git
+git clone https://github.com/Danietta894/FrontEndMyNuvemLens.git
 ```
 
 2. Acesse a pasta da API e instale as dependências:
@@ -94,7 +94,7 @@ Foram realizados os seguintes testes:
 
 ---
 
-## 🎥 Demonstração
+## Demonstração
 
 Confira o vídeo com a API em funcionamento:  
  [Acessar Demo no Google Drive](https://drive.google.com/drive/folders/1v2yOq2h7IxqkmguCXe9tFR3N6VZ1_VVB?sort=13&direction=a)
