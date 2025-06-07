@@ -20,7 +20,7 @@ API desenvolvida para gerenciamento de fotos, usuários, comentários e pedidos 
 
 - **Node.js**
 - **Express**
-- **MySQL** + **Sequelize ORM**
+- **MySQL** 
 - **JWT** (autenticação)
 - **Multer** (upload de imagens)
 - **Jest** (testes automatizados)
