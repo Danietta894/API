@@ -16,6 +16,18 @@ API desenvolvida para gerenciamento de fotos, usuários, comentários e pedidos 
 
 ---
 
+## Banco de Dados
+
+Este projeto utiliza MySQL como sistema de gerenciamento de banco de dados.
+
+Os scripts SQL estão disponíveis na pasta [`MYSQLDUMP`](./MYSQLDUMP).   
+Eles incluem:
+
+- Estrutura do banco (tabelas e relacionamentos)
+- Inserts básicos
+
+---
+  
 ##  Tecnologias Utilizadas
 
 - **Node.js**
