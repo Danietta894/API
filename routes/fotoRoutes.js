@@ -21,4 +21,5 @@ router.get(
   fotoController.listarFotosPendentesDoUsuario
 );
 
+
 module.exports = router;

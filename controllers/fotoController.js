@@ -66,15 +66,21 @@ exports.criarFoto = async (req, res) => {
 
 // Listar fotos aprovadas (para galeria pública)
 exports.listarFotosAprovadas = (req, res) => {
-  const query = `
+  const { pagina = 1, limite = 10, tipo ="" } = req.query;
+  const query = ` 
     SELECT f.*, u.nome AS nome_usuario
     FROM fotos f
     JOIN validacao v ON f.id = v.foto_id
     JOIN usuarios u ON f.usuario_id = u.id
     WHERE v.status = 'aprovada'
+    ${tipo ? "AND f.tipo = ?" : ""}
+    limit ? offset ?
   `;
+  const offset = (+limite * (+pagina - 1));
+  const valores = tipo ? [tipo, +limite, offset] : [+limite, offset];
 
-  db.query(query, (erro, resultados) => {
+console.log("limi offset", [+limite, +limite * (+pagina - 1)]);
+  db.query(query,valores, (erro, resultados) => {
     if (erro) {
       console.error("Erro ao buscar fotos aprovadas:", erro);
       return res.status(500).json({ erro: "Erro ao buscar as fotos" });

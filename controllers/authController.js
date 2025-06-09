@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 
-// Login de Usuário
+
 exports.login = (req, res) => {
   const { email, senha } = req.body;
   const sql = "SELECT * FROM usuarios WHERE email = ?";
@@ -29,7 +29,7 @@ exports.login = (req, res) => {
 
 exports.loginGoogle = async (req, res) => {
   const profile = req.user;
-  // const { nome, email, senha } = req.body;
+
   const email = profile.email;
   const nome = profile.displayName;
 
@@ -82,11 +82,10 @@ exports.loginGoogle = async (req, res) => {
     }
   });
 
-  //  Caso queira retornar JSON:
-  // res.json({ message: "Login realizado com sucesso!", token, user: profile });
+
 };
 
-// Registro de Novo Usuário
+
 exports.register = async (req, res) => {
   const { nome, email, senha } = req.body;
   const senhaCriptografada = await bcrypt.hash(senha, 10);

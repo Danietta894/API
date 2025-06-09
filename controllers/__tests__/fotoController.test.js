@@ -1,5 +1,5 @@
 const request = require("supertest");
-const app = require("../../app"); // seu arquivo principal do servidor
+const app = require("../../app"); 
 
 describe("Rotas de Fotos", () => {
   it("Deve listar fotos aprovadas", async () => {
@@ -9,7 +9,7 @@ describe("Rotas de Fotos", () => {
   });
   afterAll(() => {
     const db = require("../../config/db");
-    db.end(); // Fecha a conexão com o banco após os testes
+    db.end(); 
   });
 
 });
