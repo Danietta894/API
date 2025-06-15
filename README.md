@@ -57,7 +57,7 @@ git clone https://github.com/Danietta894/FrontEndMyNuvemLens.git
 2. Acesse a pasta da API e instale as dependências:
 
 ```bash
-cd API
+cd BackEndMyNuvemLens
 npm install
 ```
 
