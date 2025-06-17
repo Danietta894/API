@@ -1,59 +1,82 @@
-const db = require("../config/db");
+const Perfil = require("../models/perfil");
 
-// Listar perfis
-exports.listarPerfis = (req, res) => {
-    db.query("SELECT * FROM perfis", (erro, resultado) => {
-        if (erro) return res.status(500).json({ erro: "Erro ao buscar perfis" });
-        res.json(resultado);
-    });
+exports.listarPerfis = async (req, res) => {
+  try {
+    const perfis = await Perfil.findAll();
+    res.json(perfis);
+  } catch (error) {
+    console.error("Erro ao buscar perfis:", error);
+    res.status(500).json({ erro: "Erro ao buscar perfis" });
+  }
 };
 
-// Buscar um perfil por ID
-exports.buscarPerfil = (req, res) => {
-    const { id } = req.params;
+exports.buscarPerfil = async (req, res) => {
+  const { id } = req.params;
 
-    db.query("SELECT * FROM perfis WHERE id = ?", [id], (erro, resultado) => {
-        if (erro) return res.status(500).json({ erro: "Erro ao buscar perfil" });
-        if (resultado.length === 0) return res.status(404).json({ erro: "Perfil não encontrado" });
-        res.json(resultado[0]);
-    });
+  try {
+    const perfil = await Perfil.findByPk(id);
+
+    if (!perfil) {
+      return res.status(404).json({ erro: "Perfil não encontrado" });
+    }
+
+    res.json(perfil);
+  } catch (error) {
+    console.error("Erro ao buscar perfil:", error);
+    res.status(500).json({ erro: "Erro ao buscar perfil" });
+  }
 };
 
-// Criar um novo perfil
-exports.criarPerfil = (req, res) => {
-    const { nome } = req.body;
+exports.criarPerfil = async (req, res) => {
+  const { nome } = req.body;
 
-    if (!nome)
-          return res.status(400).json({ erro: "Usuário e nome são obrigatórios" });
+  if (!nome) {
+    return res.status(400).json({ erro: "Nome é obrigatório" });
+  }
 
-    db.query("INSERT INTO perfis ( nome) VALUES (?)",
-        [nome], 
-        (erro, resultado) => {
-            if (erro) return res.status(500).json({ erro: "Erro ao criar perfil" });
-            res.status(201).json({ mensagem: "Perfil criado com sucesso!", id: resultado.insertId });
-        }
-    );
+  try {
+    const perfil = await Perfil.create({ nome });
+    res.status(201).json({
+      mensagem: "Perfil criado com sucesso!",
+      perfil,
+    });
+  } catch (error) {
+    console.error("Erro ao criar perfil:", error);
+    res.status(500).json({ erro: "Erro ao criar perfil" });
+  }
 };
 
-// Atualizar um perfil
-exports.atualizarPerfil = (req, res) => {
-    const { id } = req.params;
-    const { nome } = req.body;
+exports.atualizarPerfil = async (req, res) => {
+  const { id } = req.params;
+  const { nome } = req.body;
 
-    db.query("UPDATE perfis SET nome = ? WHERE id = ?", [nome, id], (erro, resultado) => {
-        if (erro) return res.status(500).json({ erro: "Erro ao atualizar perfil" });
-        if (resultado.affectedRows === 0) return res.status(404).json({ erro: "Perfil não encontrado" });
-        res.json({ mensagem: "Perfil atualizado com sucesso!" });
-    });
+  try {
+    const [atualizado] = await Perfil.update({ nome }, { where: { id } });
+
+    if (atualizado === 0) {
+      return res.status(404).json({ erro: "Perfil não encontrado" });
+    }
+
+    res.json({ mensagem: "Perfil atualizado com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao atualizar perfil:", error);
+    res.status(500).json({ erro: "Erro ao atualizar perfil" });
+  }
 };
 
-// Deletar um perfil
-exports.deletarPerfil = (req, res) => {
-    const { id } = req.params;
+exports.deletarPerfil = async (req, res) => {
+  const { id } = req.params;
 
-    db.query("DELETE FROM perfis WHERE id = ?", [id], (erro, resultado) => {
-        if (erro) return res.status(500).json({ erro: "Erro ao excluir perfil" });
-        if (resultado.affectedRows === 0) return res.status(404).json({ erro: "Perfil não encontrado" });
-        res.json({ mensagem: "Perfil excluído com sucesso!" });
-    });
+  try {
+    const deletado = await Perfil.destroy({ where: { id } });
+
+    if (deletado === 0) {
+      return res.status(404).json({ erro: "Perfil não encontrado" });
+    }
+
+    res.json({ mensagem: "Perfil excluído com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao excluir perfil:", error);
+    res.status(500).json({ erro: "Erro ao excluir perfil" });
+  }
 };

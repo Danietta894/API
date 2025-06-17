@@ -1,41 +1,57 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
-const passport = require("./middleware/authGoogle");
+const path = require("path");
+const passport = require("./passport");
+const session = require("express-session");
+const sequelize = require("./config/database");
 
 const app = express();
 
-//  Middlewares básicos
+sequelize
+  .authenticate()
+  .then(() => console.log("Conectado ao banco de dados."))
+  .catch((err) => console.error("Erro ao conectar ao banco:", err));
+
 app.use(cors());
 app.use(express.json());
-app.use(passport.initialize()); //  Apenas isso, sem session
 
-// Teste se a API está rodando
-app.get("/", (req, res) => {
-  res.send(" API NuvemLens rodando!");
-});
 
-//  Rotas de autenticação
+//   session({
+//     secret: process.env.JWT_SECRET || "secreto",
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: { secure: false },
+//   })
+// );
+
+
+// app.use(passport.session());
+
+ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+const fotoRoutes = require("./routes/fotoRoutes");
+const validacaoRoutes = require("./routes/validacaoRoutes");
+const comentarioRoutes = require("./routes/comentarioRoutes");
+const curtidaRoutes = require("./routes/curtidaRoutes");
+const denunciaRoutes = require("./routes/denunciaRoutes");
+const atividadeRoutes = require("./routes/atividadeRoutes");
+const usuarioRoutes = require("./routes/usuarioRoutes");
 const authRoutes = require("./routes/authRoutes");
+
+app.use("/api/fotos", fotoRoutes);
+app.use("/api/validacao", validacaoRoutes);
+app.use("/api/imagens", validacaoRoutes);
+app.use("/api/comentarios", comentarioRoutes);
+app.use("/api/4", curtidaRoutes);
+app.use("/api/5", denunciaRoutes);
+app.use("/api/atividades", atividadeRoutes);
+app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/auth", authRoutes);
 
-//  Outras rotas da API
-app.use("/api", require("./routes/fotoRoutes"));
-app.use("/api/comentarios", require("./routes/comentarioRoutes"));
-app.use("/api", require("./routes/curtidaRoutes"));
-app.use("/api", require("./routes/envioRoutes"));
-app.use("/api", require("./routes/perfilRoutes"));
-app.use("/api", require("./routes/pedidosRoutes"));
-app.use("/api/produtos", require("./routes/produtoRoutes"));
-app.use("/api", require("./routes/usuarioRoutes"));
-app.use("/api/pagamentos", require("./routes/pagamentoRoutes"));
-app.use("/api", require("./routes/itens_pedidosRoutes"));
-app.use("/api/denuncia", require("./routes/denunciaRoutes"));
-app.use("/api", require("./routes/moderadorRoutes"));
-app.use("/api", require("./routes/validacaoRoutes"));
-
-//  Uploads
-app.use("/uploads", express.static("uploads"));
-app.use("/api/upload", require("./routes/uploadRoutes"));
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: "Erro interno no servidor." });
+});
 
 module.exports = app;

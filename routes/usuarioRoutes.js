@@ -4,10 +4,10 @@ const authMiddleware = require("../middleware/authMiddleware");
 const usuarioController = require("../controllers/usuarioController");
 
 router.use(authMiddleware.verificarToken);
-// ✅ Adicione aqui sua nova rota simulada (ou a real depois)
+
 router.get("/perfilusuario", (req, res) => {
   const usuarioId = req.usuarioId;
-console.log(usuarioId); // Verifica se o ID do usuário está correto
+console.log(usuarioId); 
   res.json({
     usuario: {
       nome: "Daniella Nunes",
@@ -26,11 +26,11 @@ console.log(usuarioId); // Verifica se o ID do usuário está correto
 });
 
 // Outras rotas
-router.put("/usuarios/eu", usuarioController.atualizarUsuario); 
-router.get("/usuarios/eu", usuarioController.buscarUsuarioeu);
-router.get("/usuarios/:id", usuarioController.buscarUsuario);
-router.post("/usuarios", usuarioController.criarUsuario);
-router.delete("/usuarios/:id", usuarioController.deletarUsuario);
-router.get("/usuarios", usuarioController.listarUsuarios);
+router.put("/eu", usuarioController.atualizarUsuario); 
+router.get("/eu", usuarioController.buscarUsuarioeu);
+router.get("/:id", usuarioController.buscarUsuario);
+router.post("", usuarioController.criarUsuario);
+router.delete("/:id", usuarioController.deletarUsuario);
+router.get("", usuarioController.listarUsuarios);
 
 module.exports = router;

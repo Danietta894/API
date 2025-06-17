@@ -1,62 +1,95 @@
-const db = require("../config/db");
+const Validacao = require("../models/validacao");
+const Foto = require("../models/fotos");
+const Usuario = require("../models/usuarios");
 
-// Buscar imagens pendentes
-exports.getImagensPendentes = (req, res) => {
-  const sql = `
-    SELECT f.*, u.nome AS nome_usuario
-    FROM fotos f
-    JOIN usuarios u ON f.usuario_id = u.id
-    JOIN validacao v ON f.id = v.foto_id
-    WHERE v.status = 'pendente'
-  `;
+exports.getImagensPendentes = async (req, res) => {
+  try {
+    const imagens = await Foto.findAll({
+      include: [
+        {
+          model: Validacao,
+          as: "validacao",
+          where: { status: "pendente" },
+        },
+        {
+          model: Usuario,
+          as: "usuario",
+          attributes: ["id", "nome"],
+        },
+      ],
+      order: [["criado_em", "DESC"]],
+    });
 
-  db.query(sql, (err, resultados) => {
-    if (err) {
-      console.error("Erro ao buscar imagens pendentes:", err);
-      return res.status(500).json({ erro: "Erro ao buscar imagens pendentes" });
-    }
+    res.json(
+      imagens.map((imagem) => {
+        const foto = imagem.get({ plain: true });
+        foto.nome_usuario = imagem.usuario.nome;
+        delete foto.usuario; 
+        delete foto.validacao
 
-    res.json(resultados);
-  });
+        return foto;
+      })
+    );
+  } catch (erro) {
+    console.error("Erro ao buscar imagens pendentes:", erro);
+    res.status(500).json({ erro: "Erro ao buscar imagens pendentes" });
+  }
 };
 
+exports.aprovarImagem = async (req, res) => {
+  const { id } = req.params;
+  const { tipo, observacao } = req.body;
+  const moderador_id = req.user?.id;
 
-// Aprovar imagem
-exports.aprovarImagem = (req, res) => {
-  const imagemId = req.params.id;
+  try {
+    const [atualizouValidacao] = await Validacao.update(
+      {
+        status: "aprovada",
+        moderador_id,
+        observacao: observacao || null,
+        data_validacao: new Date(),
+      },
+      { where: { foto_id: id } }
+    );
 
-  const sql = "UPDATE validacao SET status = 'aprovada' WHERE foto_id = ?";
-
-  db.query(sql, [imagemId], (err) => {
-    if (err) {
-      console.error("Erro ao aprovar imagem:", err);
-      return res.status(500).json({ erro: "Erro ao aprovar imagem" });
+    if (atualizouValidacao === 0) {
+      return res.status(404).json({ erro: "Validação não encontrada" });
     }
-    // Atualiza o tipo da imagem na tabela fotos
-     // Aqui você pode definir o tipo como 'aprovada' ou outro valor que faça sentido
-     console.log("req.body.tipo", req.body);
-     const sqlfoto = "UPDATE fotos SET tipo = ? WHERE id = ?";
-     db.query(sqlfoto, [req.body.tipo, imagemId], (err) => {
-       if (err) {
-         console.error("Erro ao aprovar imagem:", err);
-         return res.status(500).json({ erro: "Erro ao aprovar imagem" });
-       }
-       res.sendStatus(200);
-     });
-  });
- 
+
+    await Foto.update({ tipo: tipo || "", status: "ativo" }, { where: { id } });
+
+    res.json({ mensagem: "Imagem aprovada com sucesso!" });
+  } catch (erro) {
+    console.error("Erro ao aprovar imagem:", erro);
+    res.status(500).json({ erro: "Erro ao aprovar imagem" });
+  }
 };
 
-// Recusar imagem
-exports.recusarImagem = (req, res) => {
-  const imagemId = req.params.id;
+exports.recusarImagem = async (req, res) => {
+  const { id } = req.params;
+  const { observacao } = req.body;
+  const moderador_id = req.user?.id;
 
-  const sql = "UPDATE validacao SET status = 'recusada' WHERE foto_id = ?";
-  db.query(sql, [imagemId], (err) => {
-    if (err) {
-      console.error("Erro ao recusar imagem:", err);
-      return res.status(500).json({ erro: "Erro ao recusar imagem" });
+  try {
+    const [atualizouValidacao] = await Validacao.update(
+      {
+        status: "recusada",
+        moderador_id,
+        observacao: observacao || null,
+        data_validacao: new Date(),
+      },
+      { where: { foto_id: id } }
+    );
+
+    if (atualizouValidacao === 0) {
+      return res.status(404).json({ erro: "Validação não encontrada" });
     }
-    res.sendStatus(200);
-  });
+
+    await Foto.update({ status: "recusada" }, { where: { id } });
+
+    res.json({ mensagem: "Imagem recusada com sucesso!" });
+  } catch (erro) {
+    console.error("Erro ao recusar imagem:", erro);
+    res.status(500).json({ erro: "Erro ao recusar imagem" });
+  }
 };

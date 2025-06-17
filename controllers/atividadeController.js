@@ -1,17 +1,26 @@
-const db = require("../config/db");
+const Atividade = require("../models/atividades");
+const Moderador = require("../models/moderador");
 
-exports.listarAtividades = (req, res) => {
+exports.listarAtividades = async (req, res) => {
   const { moderadorId } = req.params;
 
-  db.query(
-    "SELECT * FROM atividades_moderador WHERE moderador_id = ? ORDER BY data DESC",
-    [moderadorId],
-    (erro, resultados) => {
-      if (erro)
-        return res.status(500).json({ erro: "Erro ao buscar atividades" });
-      res.json(resultados);
-    }
-  );
+  try {
+    const atividades = await Atividade.findAll({
+      where: { moderador_id: moderadorId },
+      include: [
+        {
+          model: Moderador,
+          as: "moderador",
+          attributes: ["id", "nome_exibicao"],
+        },
+      ],
+      order: [["data", "DESC"]],
+      limit: 10,
+    });
+
+    res.json(atividades);
+  } catch (erro) {
+    console.error("Erro ao buscar atividades:", erro);
+    res.status(500).json({ erro: "Erro ao buscar atividades" });
+  }
 };
-
-
