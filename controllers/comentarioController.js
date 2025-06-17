@@ -1,138 +1,103 @@
 const db = require("../config/db");
-const Comentario = require("../models/comentarios");
-const Usuario = require("../models/usuarios");
+
 // Listar todos os comentários
-const listarComentarios = async (req, res) => {
-  const { foto_id } = req.query;
-
-  try {
-    const where = foto_id ? { foto_id } : {};
-
-    const comentarios = await Comentario.findAll({
-      where,
-      include: [
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "nome"],
-        },
-      ],
-      order: [["data_comentario", "DESC"]],
-    });
-
-    res.json(comentarios.map((comentario) => ({
-      id: comentario.id,
-      usuario_id: comentario.usuario_id,
-      foto_id: comentario.foto_id,
-      texto: comentario.texto,
-      data_comentario: comentario.data_comentario,
-      nome: comentario.usuario.nome,
-    })));
-  } catch (error) {
-    console.error("Erro ao buscar comentários:", error);
-    res.status(500).json({ erro: "Erro ao buscar comentários" });
+const listarComentarios = (req, res) => {
+  const foto_id = req.query.foto_id;
+  if (foto_id) {
+    db.query(
+      "SELECT usuarios.nome, comentarios.data_comentario, comentarios.id, comentarios.usuario_id, comentarios.texto FROM comentarios, usuarios WHERE foto_id = ? AND comentarios.usuario_id = usuarios.id",
+      [foto_id],
+      (erro, resultados) => {
+        console.log(erro);
+        if (erro)
+          return res.status(500).json({ erro: "Erro ao buscar comentários" });
+        res.json(resultados);
+      }
+    );
+    return;
   }
+  db.query("SELECT * FROM comentarios", (erro, resultados) => {
+    if (erro)
+      return res.status(500).json({ erro: "Erro ao buscar comentários" });
+    res.json(resultados);
+  });
 };
 
-const buscarComentario = async (req, res) => {
+// Buscar um comentário pelo ID
+const buscarComentario = (req, res) => {
   const { id } = req.params;
-
-  try {
-    const comentario = await Comentario.findByPk(id, {
-      include: [
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "nome"],
-        },
-      ],
-    });
-
-    if (!comentario) {
-      return res.status(404).json({ erro: "Comentário não encontrado" });
+  db.query(
+    "SELECT * FROM comentarios WHERE id = ?",
+    [id],
+    (erro, resultado) => {
+      if (erro)
+        return res.status(500).json({ erro: "Erro ao buscar comentário" });
+      if (resultado.length === 0)
+        return res.status(404).json({ erro: "Comentário não encontrado" });
+      res.json(resultado[0]);
     }
-
-    res.json(comentario);
-  } catch (error) {
-    console.error("Erro ao buscar comentário:", error);
-    res.status(500).json({ erro: "Erro ao buscar comentário" });
-  }
+  );
 };
 
-
-
-const criarComentario = async (req, res) => {
+// Criar um novo comentário
+const criarComentario = (req, res) => {
   const { foto_id, texto } = req.body;
   const usuario_id = req.user?.id;
 
-  if (!foto_id || !texto) {
+  console.log(usuario_id, req.user);
+
+  if (!foto_id || !texto)
     return res
       .status(400)
       .json({ erro: "Preencha todos os campos obrigatórios." });
-  }
 
-  try {
-    const comentario = await Comentario.create({
-      usuario_id,
-      foto_id,
-      texto,
-      data_comentario: new Date(),
-    });
+  db.query(
+    "INSERT INTO comentarios (usuario_id, foto_id, texto, data_comentario) VALUES (?, ?, ?, NOW())",
+    [usuario_id, foto_id, texto],
+    (erro, resultado) => {
+      console.log(erro);
 
-    res.status(201).json({
-      mensagem: "Comentário criado com sucesso!",
-      comentario,
-    });
-  } catch (erro) {
-    console.error("Erro ao salvar comentário:", erro);
-    res.status(500).json({ erro: "Erro ao salvar comentário" });
-  }
+      if (erro)
+        return res.status(500).json({ erro: "Erro ao salvar comentário" });
+      res
+        .status(201)
+        .json({ id: resultado.insertId, usuario_id, foto_id, texto });
+    }
+  );
 };
 
-
-const atualizarComentario = async (req, res) => {
+// Atualizar um comentário
+const atualizarComentario = (req, res) => {
   const { id } = req.params;
   const { texto } = req.body;
 
-  if (!texto) {
-    return res.status(400).json({ erro: "O campo texto é obrigatório." });
-  }
-
-  try {
-    const [linhasAfetadas] = await Comentario.update(
-      { texto },
-      { where: { id } }
-    );
-
-    if (linhasAfetadas === 0) {
-      return res.status(404).json({ erro: "Comentário não encontrado" });
+  db.query(
+    "UPDATE comentarios SET texto = ? WHERE id = ?",
+    [texto, id],
+    (erro, resultado) => {
+      if (erro)
+        return res.status(500).json({ erro: "Erro ao atualizar o comentário" });
+      if (resultado.affectedRows === 0)
+        return res.status(404).json({ erro: "Comentário não encontrado" });
+      res.json({ mensagem: "Comentário atualizado com sucesso!" });
     }
-
-    res.json({ mensagem: "Comentário atualizado com sucesso!" });
-  } catch (error) {
-    console.error("Erro ao atualizar o comentário:", error);
-    res.status(500).json({ erro: "Erro ao atualizar o comentário" });
-  }
+  );
 };
 
-const deletarComentario = async (req, res) => {
+// Excluir um comentário
+const deletarComentario = (req, res) => {
   const { id } = req.params;
 
-  try {
-    const linhasAfetadas = await Comentario.destroy({ where: { id } });
-
-    if (linhasAfetadas === 0) {
+  db.query("DELETE FROM comentarios WHERE id = ?", [id], (erro, resultado) => {
+    if (erro)
+      return res.status(500).json({ erro: "Erro ao excluir o comentário" });
+    if (resultado.affectedRows === 0)
       return res.status(404).json({ erro: "Comentário não encontrado" });
-    }
-
     res.json({ mensagem: "Comentário excluído com sucesso!" });
-  } catch (error) {
-    console.error("Erro ao excluir o comentário:", error);
-    res.status(500).json({ erro: "Erro ao excluir o comentário" });
-  }
+  });
 };
 
-
+// ✅ Exportar todos os métodos corretamente
 module.exports = {
   listarComentarios,
   buscarComentario,

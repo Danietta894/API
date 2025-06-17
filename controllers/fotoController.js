@@ -1,15 +1,13 @@
-const Foto = require("../models/fotos");
-const { Validacao, Usuario } = require("../models");
-const { Op } = require("sequelize");
+const db = require("../config/db");
 
+// Criar nova foto
 exports.criarFoto = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ erro: "Nenhuma imagem enviada." });
   }
 
-  const { descricao, localizacao, longitude, latitude, fotografado_em, tipo } =
+  const { descricao, localizacao, longitude, latitude, fotografado_em } =
     req.body;
-  const usuario_id = req.user?.id;
 
   if (
     !descricao ||
@@ -18,176 +16,150 @@ exports.criarFoto = async (req, res) => {
     !latitude ||
     !fotografado_em
   ) {
-    return res
-      .status(400)
-      .json({ erro: "Preencha todos os campos obrigatórios." });
+    return res.status(400).json({ erro: "Preencha todos os campos" });
   }
 
   try {
-    const foto = await Foto.create({
-      url: `/uploads/${req.file.filename}`,
+    const query = `
+      INSERT INTO fotos (url, descricao, tipo, usuario_id, localizacao, longitude, latitude, fotografado_em)
+      VALUES (?, ?, '', ?, ?, ?, ?, ?)
+    `;
+    const valores = [
+      `/uploads/${req.file.filename}`,
       descricao,
-      tipo: tipo || "",
-      usuario_id,
+      req.user.id,
       localizacao,
       longitude,
       latitude,
       fotografado_em,
-      criado_em: new Date(),
-      status: "pendente",
-    });
+    ];
 
-    await Validacao.create({
-        foto_id: foto.id,
-        moderador_id: null,
-        status: "pendente",
+    db.query(query, valores, (erro, resultado) => {
+      if (erro) {
+        console.error(erro);
+        return res.status(500).json({ erro: "Erro ao salvar a foto" });
+      }
+
+      const fotoId = resultado.insertId;
+
+      const insertValidacao = `
+        INSERT INTO validacao (foto_id, moderador_id, status)
+        VALUES (?, NULL, 'pendente')
+      `;
+
+      db.query(insertValidacao, [fotoId], (errValidacao) => {
+        if (errValidacao) {
+          console.error("Erro ao criar validação:", errValidacao);
+          return res
+            .status(500)
+            .json({ erro: "Erro ao criar validação da imagem" });
+        }
+
+        res.status(201).json({ id: fotoId, ...req.body });
       });
-
-    res.status(201).json({
-      mensagem: "Foto cadastrada com sucesso!",
-      foto,
     });
   } catch (erro) {
-    console.error("Erro ao criar foto:", erro);
-    res.status(500).json({ erro: "Erro no servidor ao salvar a foto." });
+    console.error("Erro no servidor:", erro);
+    return res.status(500).json({ erro: "Erro no servidor" });
   }
 };
 
-exports.listarFotosAprovadas = async (req, res) => {
-  const { pagina = 1, limite = 10, tipo } = req.query;
-  const offset = (pagina - 1) * limite;
+// Listar fotos aprovadas (para galeria pública)
+exports.listarFotosAprovadas = (req, res) => {
+  const { pagina = 1, limite = 10, tipo ="" } = req.query;
+  const query = ` 
+    SELECT f.*, u.nome AS nome_usuario
+    FROM fotos f
+    JOIN validacao v ON f.id = v.foto_id
+    JOIN usuarios u ON f.usuario_id = u.id
+    WHERE v.status = 'aprovada'
+    ${tipo ? "AND f.tipo = ?" : ""}
+    limit ? offset ?
+  `;
+  const offset = (+limite * (+pagina - 1));
+  const valores = tipo ? [tipo, +limite, offset] : [+limite, offset];
 
-  try {
-    const fotos = await Foto.findAll({
-      where: {
-        ...(tipo ? { tipo } : {}),
-      },
-      include: [
-        {
-          model: Validacao,
-          as: "validacao",
-          where: { status: "aprovada" },
-        },
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "nome"],
-        },
-      ],
-      limit: +limite,
-      offset: +offset,
-      order: [["criado_em", "DESC"]],
-    });
-
-    res.json(fotos);
-  } catch (erro) {
-    console.error("Erro ao buscar fotos aprovadas:", erro);
-    res.status(500).json({ erro: "Erro ao buscar as fotos" });
-  }
-};
-
-exports.listarFotosDoUsuario = async (req, res) => {
-  const usuario_id = req.user.id;
-
-  try {
-    const fotos = await Foto.findAll({
-      where: { usuario_id },
-      order: [["criado_em", "DESC"]],
-    });
-
-    res.json(fotos);
-  } catch (erro) {
-    console.error("Erro ao buscar fotos do usuário:", erro);
-    res.status(500).json({ erro: "Erro ao buscar as fotos" });
-  }
-};
-
-exports.listarFotosPendentesDoUsuario = async (req, res) => {
-  const usuario_id = req.user.id;
-
-  try {
-    const fotos = await Foto.findAll({
-      where: {
-        usuario_id,
-      },
-      include: [
-        {
-          model: Validacao,
-          as: "validacao",
-          where: { status: "pendente" },
-        },
-      ],
-      order: [["criado_em", "DESC"]],
-    });
-
-    res.json(fotos);
-  } catch (erro) {
-    console.error("Erro ao buscar fotos pendentes:", erro);
-    res.status(500).json({ erro: "Erro ao buscar as fotos" });
-  }
-};
-
-exports.listarFotosPorId = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const foto = await Foto.findByPk(id, {
-      include: [
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "nome"],
-        },
-      ],
-    });
-
-    if (!foto) {
-      return res.status(404).json({ erro: "Foto não encontrada" });
+console.log("limi offset", [+limite, +limite * (+pagina - 1)]);
+  db.query(query,valores, (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar fotos aprovadas:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar as fotos" });
     }
-
-    res.json(foto);
-  } catch (erro) {
-    console.error("Erro ao buscar foto:", erro);
-    res.status(500).json({ erro: "Erro ao buscar a foto" });
-  }
+    res.json(resultados);
+  });
 };
 
-exports.atualizarFoto = async (req, res) => {
+// Listar fotos do usuário logado
+exports.listarFotosDoUsuario = (req, res) => {
+  const query = "SELECT * FROM fotos WHERE usuario_id = ?";
+
+  db.query(query, [req.user.id], (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar fotos do usuário:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar as fotos" });
+    }
+    res.json(resultados);
+  });
+};
+
+exports.listarFotosPendentesDoUsuario = (req, res) => {
+  const query = `SELECT f.* 
+  FROM fotos f
+  JOIN validacao v ON f.id = v.foto_id
+    WHERE v.status = 'pendente'
+   and f.usuario_id = ?`;
+
+  db.query(query, [req.user.id], (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar fotos do usuário:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar as fotos" });
+    }
+    res.json(resultados);
+  });
+};
+// Buscar uma foto por ID
+exports.listarFotosporid = (req, res) => {
+  const { id } = req.params;
+  const query = "SELECT * FROM fotos WHERE id = ?";
+
+  db.query(query, [id], (erro, resultados) => {
+    if (erro) {
+      console.error("Erro ao buscar foto por ID:", erro);
+      return res.status(500).json({ erro: "Erro ao buscar a foto" });
+    }
+    res.json(resultados[0] || {});
+  });
+};
+
+// Atualizar uma foto
+exports.atualizarFoto = (req, res) => {
   const { id } = req.params;
   const { url, descricao, tipo } = req.body;
 
-  try {
-    const [linhasAfetadas] = await Foto.update(
-      { url, descricao, tipo },
-      { where: { id } }
-    );
+  const query = `
+    UPDATE fotos SET url = ?, descricao = ?, tipo = ? WHERE id = ?
+  `;
+  const valores = [url, descricao, tipo, id];
 
-    if (linhasAfetadas === 0) {
-      return res.status(404).json({ erro: "Foto não encontrada" });
+  db.query(query, valores, (erro) => {
+    if (erro) {
+      console.error(erro);
+      return res.status(500).json({ erro: "Erro ao atualizar a foto" });
     }
-
     res.json({ mensagem: "Foto atualizada com sucesso!" });
-  } catch (erro) {
-    console.error("Erro ao atualizar foto:", erro);
-    res.status(500).json({ erro: "Erro ao atualizar a foto" });
-  }
+  });
 };
 
-exports.deletarFoto = async (req, res) => {
+// Excluir uma foto
+exports.deletarFoto = (req, res) => {
   const { id } = req.params;
+  const query = "DELETE FROM fotos WHERE id = ?";
 
-  try {
-    const linhasAfetadas = await Foto.destroy({
-      where: { id },
-    });
-
-    if (linhasAfetadas === 0) {
-      return res.status(404).json({ erro: "Foto não encontrada" });
+  db.query(query, [id], (erro) => {
+    if (erro) {
+      console.error(erro);
+      return res.status(500).json({ erro: "Erro ao excluir a foto" });
     }
-
     res.json({ mensagem: "Foto excluída com sucesso!" });
-  } catch (erro) {
-    console.error("Erro ao excluir foto:", erro);
-    res.status(500).json({ erro: "Erro ao excluir a foto" });
-  }
+  });
 };

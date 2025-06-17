@@ -1,4 +1,4 @@
-
+// controllers/uploadController.js
 const registrarAtividade = (moderadorId, descricao) => {
   const dataAtual = new Date();
   db.query(

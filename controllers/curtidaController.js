@@ -1,97 +1,50 @@
 const db = require("../config/db");
 
-const Curtida = require("../models/curtidas");
-const Usuario = require("../models/usuarios");
+// Listar curtidas de uma foto
+exports.listarCurtidas = (req, res) => {
+    const { foto_id } = req.params;
 
-exports.listarCurtidas = async (req, res) => {
-  const { foto_id } = req.params;
-
-  try {
-    const curtidas = await Curtida.findAll({
-      where: { foto_id },
-      include: [
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "nome"],
-        },
-      ],
+    db.query("SELECT * FROM curtidas WHERE foto_id = ?", [foto_id], (erro, resultado) => {
+        if (erro) return res.status(500).json({ erro: "Erro ao buscar curtidas" });
+        res.json(resultado);
     });
-
-    res.json(curtidas);
-  } catch (error) {
-    console.error("Erro ao buscar curtidas:", error);
-    res.status(500).json({ erro: "Erro ao buscar curtidas" });
-  }
 };
 
+exports.adicionarCurtida = (req, res) => {
+    const { usuario_id, foto_id } = req.body;
 
-exports.adicionarCurtida = async (req, res) => {
-  const { foto_id } = req.body;
-  const usuario_id = req.user?.id; 
-
-  if (!foto_id) {
-    return res.status(400).json({ erro: "Foto é obrigatória" });
-  }
-
-  try {
-   
-    const curtidaExistente = await Curtida.findOne({
-      where: { usuario_id, foto_id },
-    });
-
-    if (curtidaExistente) {
-      return res.status(400).json({ erro: "Você já curtiu essa foto" });
+    if (!usuario_id || !foto_id) {
+        return res.status(400).json({ erro: "Usuário e foto são obrigatórios" });
     }
 
-    const novaCurtida = await Curtida.create({ usuario_id, foto_id });
+    db.query("INSERT INTO curtidas (usuario_id, foto_id) VALUES (?, ?)", [usuario_id, foto_id], (erro, resultado) => {
+        if (erro) return res.status(500).json({ erro: "Erro ao curtir a foto" });
 
-    res.status(201).json({
-      mensagem: "Curtida adicionada com sucesso!",
-      curtida: novaCurtida,
+        res.status(201).json({ mensagem: "Curtida adicionada com sucesso!", id: resultado.insertId });
     });
-  } catch (error) {
-    console.error("Erro ao adicionar curtida:", error);
-    res.status(500).json({ erro: "Erro ao curtir a foto" });
-  }
 };
 
 
-exports.removerCurtida = async (req, res) => {
-  const { foto_id } = req.body;
-  const usuario_id = req.user?.id; // Obtido do token JWT
+// Remover uma curtida
+exports.removerCurtida = (req, res) => {
+    const { usuario_id, foto_id } = req.body;
 
-  if (!foto_id) {
-    return res.status(400).json({ erro: "Foto é obrigatória" });
-  }
+    if (!usuario_id || !foto_id) return res.status(400).json({ erro: "Usuário e foto são obrigatórios" });
 
-  try {
-    const linhasAfetadas = await Curtida.destroy({
-      where: { usuario_id, foto_id },
+    db.query("DELETE FROM curtidas WHERE usuario_id = ? AND foto_id = ?", [usuario_id, foto_id], (erro, resultado) => {
+        if (erro) return res.status(500).json({ erro: "Erro ao remover curtida" });
+        if (resultado.affectedRows === 0) return res.status(404).json({ erro: "Curtida não encontrada" });
+
+        res.json({ mensagem: "Curtida removida com sucesso!" });
     });
-
-    if (linhasAfetadas === 0) {
-      return res.status(404).json({ erro: "Curtida não encontrada" });
-    }
-
-    res.json({ mensagem: "Curtida removida com sucesso!" });
-  } catch (error) {
-    console.error("Erro ao remover curtida:", error);
-    res.status(500).json({ erro: "Erro ao remover curtida" });
-  }
 };
 
-exports.contarCurtidas = async (req, res) => {
-  const { foto_id } = req.params;
+// Contar número de curtidas de uma foto
+exports.contarCurtidas = (req, res) => {
+    const { foto_id } = req.params;
 
-  try {
-    const total = await Curtida.count({
-      where: { foto_id },
+    db.query("SELECT COUNT(*) AS total FROM curtidas WHERE foto_id = ?", [foto_id], (erro, resultado) => {
+        if (erro) return res.status(500).json({ erro: "Erro ao contar curtidas" });
+        res.json(resultado[0]);
     });
-
-    res.json({ total });
-  } catch (error) {
-    console.error("Erro ao contar curtidas:", error);
-    res.status(500).json({ erro: "Erro ao contar curtidas" });
-  }
 };
