@@ -10,7 +10,6 @@ API desenvolvida para gerenciamento de fotos, usuários, comentários e pedidos 
 - Cadastro e gerenciamento de usuários  
 - Sistema de comentários nas fotos  
 - Curtidas nas fotos  
-- Cadastro e gerenciamento de produtos e pedidos  
 - Autenticação com JWT  
 - Upload de imagens com Multer  
 
